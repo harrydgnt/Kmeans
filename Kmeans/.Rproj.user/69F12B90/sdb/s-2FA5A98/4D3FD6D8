@@ -1,0 +1,25 @@
+{
+    "contents" : "",
+    "created" : 1446075719803.000,
+    "dirty" : false,
+    "encoding" : "",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "4D3FD6D8",
+    "lastKnownWriteTime" : 7011605692497750387,
+    "path" : null,
+    "project_path" : null,
+    "properties" : {
+        "cacheKey" : "ffvd3kikg7",
+        "caption" : "test_matrix",
+        "contentUrl" : "grid_resource/gridviewer.html?env=&obj=test_matrix&cache_key=ffvd3kikg7",
+        "displayedObservations" : "100",
+        "environment" : "",
+        "object" : "test_matrix",
+        "totalObservations" : "100",
+        "variables" : "100"
+    },
+    "relative_order" : 1,
+    "source_on_save" : false,
+    "type" : "r_dataframe"
+}
