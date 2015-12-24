@@ -10,7 +10,7 @@ from sklearn import cluster
 import numpy as np
 import scipy
 import pandas
-from python_kmeans_test_haplotype_generator import haplotype_simulator
+from python_kmeans_test_haplotype_generator_complex import haplotype_simulator
 
 def similarity(matrix):
     """
@@ -18,17 +18,23 @@ def similarity(matrix):
     input: 2xlen matrix where len = length of haplo
     output: sim. score (percentage)
     """
-    sim_score=0
+    sim_score=0; zero_score=0
     for i in range(len(matrix[0])):
-        if matrix[0][i] != 0 and matrix[0][i]==matrix[1][i]:
+        
+        if matrix[0][i] == 0:
+            zero_score = zero_score+1
+        elif matrix[0][i]==matrix[1][i]:
             sim_score=sim_score+1
-    return sim_score*1.0/len(matrix[0])
+    return sim_score*1.0/len(matrix[0]), zero_score*1.0/len(matrix[0])
+
+
 
 def test(repeat):
     sim_avg=0.0;
     num_successful_clustering=0;
     for i in range(repeat):    
-        test_matrix=haplotype_simulator(1000,1000,100,2)
+        test_matrix,origin_tracker=haplotype_simulator(1000,1000,100,2,3)
+        print origin_tracker        
         test_center=[]
         test_center.append(test_matrix[0])
         test_center.append(test_matrix[500])
@@ -38,6 +44,89 @@ def test(repeat):
         if ms_vector[0] == ms_vector[251] and ms_vector[523]==ms_vector[809]:
             num_successful_clustering=num_successful_clustering+1
     print "average simliarty = ", sim_avg/repeat, "and # successful clustering = ", num_successful_clustering
+
+def test_complex(repeat, diff_ratio, num_trial, size):
+    """
+    diff_ratio used for simulator
+    num_trial = num_trials to find center - use minimum pair 
+    """
+    sim_avg=0.0
+    num_successful_clustering=0
+    cluster_score_avg=0.0
+    inaccurate_min_pair_counter = 0 
+    for i in range(repeat):
+        test_matrix,origin_tracker=haplotype_simulator(2000,size,100,3,diff_ratio)
+        test_center, sim_score, center_one_row, center_two_row = find_minimum_pair(test_matrix, size, num_trial)
+        if origin_tracker[center_one_row] == origin_tracker[center_two_row]:
+            inaccurate_min_pair_counter = inaccurate_min_pair_counter + 1 
+        sim_avg = sim_avg + sim_score
+        ms_vector = learn.cluster.MeanShift(seeds=test_center).fit_predict(test_matrix)
+        cluster_score = cluster_checker(origin_tracker,ms_vector)
+        if cluster_score == 0.0:
+            num_successful_clustering = num_successful_clustering + 1
+        
+        cluster_score_avg = cluster_score_avg + cluster_score
+    
+    
+    
+    print "average simliarty = ", sim_avg/repeat, "and # successful clustering = ", num_successful_clustering
+    print "average success rate = ", 1-(cluster_score_avg/repeat), "# wrong min pair = ", inaccurate_min_pair_counter
+
+      
+def cluster_checker(origin_tracker, cluster_vector):
+    if len(origin_tracker) != len(cluster_vector): 
+        print "Error - the size of each vector is different" 
+    inaccuracy_tracker=0
+    ori_haplo_one=0; ori_haplo_two=1
+    cls_haplo_one=-1; cls_haplo_two=-1
+#    check first one for comparison
+    if origin_tracker[0] == 0 and cluster_vector[0] == 0:
+        cls_haplo_one = 0; cls_haplo_two=1
+    elif origin_tracker[0] == 0 and cluster_vector[0] == 1:
+        cls_haplo_one = 1; cls_haplo_two=0
+    elif origin_tracker[0] == 1 and cluster_vector[0] == 0:
+        cls_haplo_one = 1; cls_haplo_two=0
+    elif origin_tracker[0] == 1 and cluster_vector[0] == 1:
+        cls_haplo_one = 0; cls_haplo_two=1
+        
+    for i in range(len(origin_tracker)):
+#       origin_tracker is in either 1 or 0 and so is cluster vector
+#       However, it is ambiguous whether 0 in origin_tracker corresponds to 0 in cluster_vector
+        if origin_tracker[i] == ori_haplo_one and cluster_vector[i] != cls_haplo_one:
+            inaccuracy_tracker=inaccuracy_tracker+1
+        if origin_tracker[i] == ori_haplo_two and cluster_vector[i] != cls_haplo_two:
+            inaccuracy_tracker=inaccuracy_tracker+1
+    return inaccuracy_tracker*1.0/len(origin_tracker)
+    
+
+
+def find_minimum_pair(matrix, size, num_trial):
+    """
+    find minimum pair in the matrix randomly 
+    """
+    center=[]
+    center_one_row=0; center_two_row=0;
+    sim_score=1
+    zero_score_factor=0.9
+    for i in range(num_trial):        
+        marker_one=np.random.randint(1,size)
+        marker_two=np.random.randint(1,size)
+        dummy_matrix=[]
+        dummy_matrix.append(matrix[marker_one])
+        dummy_matrix.append(matrix[marker_two])
+        dummy_sim_score_pre, dummy_zero_score = similarity(dummy_matrix)
+        dummy_sim_score = dummy_sim_score_pre + (zero_score_factor*dummy_zero_score)      
+        if dummy_sim_score < sim_score :
+            center_one_row = marker_one
+            center_two_row = marker_two
+            sim_score = dummy_sim_score
+    center.append(matrix[center_one_row])
+    center.append(matrix[center_two_row])
+    return center, sim_score, center_one_row, center_two_row
+         
+         
+         
+         
 if __name__ == "__main__":
 #    print "hello world"
 #    t= np.zeros((3,3), dtype = np.double)
@@ -52,7 +141,9 @@ if __name__ == "__main__":
 #    
 #    for i in range(len(k[1])):
 #        print k[1][i]
-    test(10000)
+#    test(10)
+    test_complex(100,20,300,600)
+#    print cluster_checker([1, 0, 0, 1, 0, 0], [1, 0, 1, 1,1, 0])
 #    print cluster.k_means(test_matrix,n_init=1000,n_clusters=2,max_iter=1000,precompute_distances=True)[1]
 #    print cluster.AgglomerativeClustering(n_clusters=2, affinity='euclidean').fit_predict(test_matrix)
 #    print cluster.spectral_clustering(test_matrix, n_clusters=2)
