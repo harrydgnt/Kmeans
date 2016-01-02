@@ -212,7 +212,10 @@ if __name__ == "__main__":
 #    for i in range(len(k[1])):
 #        print k[1][i]
 #    test(10)
-    test_complex(10,20,300,100)
+    haplo_ID={2,3,4,5,8,10,15,20,30,50,100}
+    for i in haplo_ID:
+        print "ASE ratio is:", i-1, ": 1"
+        test_complex(10,i,300,100)
 #    print cluster_checker([1, 0, 0, 1, 0, 0], [1, 0, 1, 1,1, 0])
 #    print cluster.k_means(test_matrix,n_init=1000,n_clusters=2,max_iter=1000,precompute_distances=True)[1]
 #    print cluster.AgglomerativeClustering(n_clusters=2, affinity='euclidean').fit_predict(test_matrix)
