@@ -12,7 +12,7 @@ import scipy
 import pandas
 from python_kmeans_test_haplotype_generator_complex import haplotype_simulator
 import os 
-
+import sys
 
 def similarity(matrix):
     """
@@ -22,17 +22,20 @@ def similarity(matrix):
     """
     sim_score=0; zero_score=0
     non_zero_counter=0
+    num_pos=len(matrix[0])
     for i in range(len(matrix[0])):
         
         if matrix[0][i] == 0:
             zero_score = zero_score+1
+        elif matrix[1][i] == 0:
+            zero_score = zero_score+1
         elif matrix[0][i]==matrix[1][i]:
             sim_score=sim_score+1
             non_zero_counter=non_zero_counter+1
-        else:
+        elif matrix[0][i] != matrix[1][i]:
             non_zero_counter=non_zero_counter+1
-    return sim_score*1.0/non_zero_counter*(1-zero_score*1.0/len(matrix[0])), zero_score*1.0/len(matrix[0])
-
+#    return sim_score*1.0/(zero_score*1.0/len(matrix[0]))*non_zero_counter, zero_score*1.0/len(matrix[0])
+    return (sim_score*1.0/non_zero_counter)*(non_zero_counter), zero_score
 
 
 def test(repeat):
@@ -67,15 +70,18 @@ def test_complex(repeat, diff_ratio, num_trial, size):
         if origin_tracker[center_one_row] == origin_tracker[center_two_row]:
             inaccurate_min_pair_counter = inaccurate_min_pair_counter + 1 
         sim_avg = sim_avg + sim_score
+        print 
         ms_vector = learn.cluster.MeanShift(seeds=test_center).fit_predict(test_matrix)
         cluster_score = cluster_checker(origin_tracker,ms_vector)
         if cluster_score == 0.0:
             num_successful_clustering = num_successful_clustering + 1
-        print i, cluster_score
+       
+        pair_ind=""        
         if origin_tracker[center_one_row] == origin_tracker[center_two_row]:
-            print "WRONG PAIR"
+            pair_ind = "WRONG PAIR"
         else: 
-            print "RIGHT PAIR"
+            pair_ind = "RIGHT PAIR"
+        print "Trial # ", i, "Error Percentage ",cluster_score, "n(NONZERO) ", np.count_nonzero(test_center[0]), np.count_nonzero(test_center[1]), pair_ind
         cluster_score_avg = cluster_score_avg + cluster_score
         
     
@@ -138,12 +144,14 @@ def find_minimum_pair(matrix, size, num_trial):
 def find_minimum_pair_new(matrix,size,num_trial):
     center = []
     center_one_row=0; center_two_row=0;
-    sim_score=1
+    sim_score=np.inf
     zero_score_factor=1.0
 #    print matrix.shape[0]
     dummy_matrix=[]
     nonzero_counter=0.90*len(matrix[0])
+#    print "NONZERO_COUNTER", nonzero_counter
     num_reads=0
+    origin_matrix=[]
 #    get the number of non_zero elements and add reads that are higher than the threshold
     for i in range(size):
 #        print np.count_nonzero(matrix[i])
@@ -151,17 +159,31 @@ def find_minimum_pair_new(matrix,size,num_trial):
 #            nonzero_counter=np.count_nonzero(matrix[i])
             dummy_matrix.append(matrix[i])
             num_reads=num_reads+1
+            origin_matrix.append(i)
+#            print "ADDED"
+#    print "NUM_READS IN CRITERIA",num_reads
+            
+            
 #    find best pair
     for j in range(num_reads):
         for k in range(j,num_reads):
             dummy_two_matrix=[]
             dummy_two_matrix.append(dummy_matrix[j])
             dummy_two_matrix.append(dummy_matrix[k])
-            dummy_sim_score, dummy_zero = similarity(dummy_two_matrix)
-            if dummy_sim_score < sim_score:
-                sim_score = dummy_sim_score
-                center_one_row = j
-                center_two_row = k
+            dummy_nonzero_num = np.count_nonzero(dummy_matrix[k])            
+            if 0.7*dummy_nonzero_num <= np.count_nonzero(dummy_matrix[j]):
+                if np.count_nonzero(dummy_matrix[j]) <= 1.2*dummy_nonzero_num: 
+                    dummy_sim_score, dummy_zero = similarity(dummy_two_matrix)
+                    if dummy_sim_score < sim_score:
+                        sim_score = dummy_sim_score
+                        center_one_row = origin_matrix[j]
+                        center_two_row = origin_matrix[k]
+                else:
+                    sys.exit(WRONG_NUMBER_READS)
+            else:
+                sys.exit(WRONG_NUMBER_READS)
+    if center_one_row == center_two_row:
+        sys.exit(WRONG_PAIR)
     center.append(matrix[center_one_row])
     center.append(matrix[center_two_row])
     return center, sim_score, center_one_row, center_two_row
@@ -190,7 +212,7 @@ if __name__ == "__main__":
 #    for i in range(len(k[1])):
 #        print k[1][i]
 #    test(10)
-    test_complex(5,5,300,500)
+    test_complex(10,20,300,100)
 #    print cluster_checker([1, 0, 0, 1, 0, 0], [1, 0, 1, 1,1, 0])
 #    print cluster.k_means(test_matrix,n_init=1000,n_clusters=2,max_iter=1000,precompute_distances=True)[1]
 #    print cluster.AgglomerativeClustering(n_clusters=2, affinity='euclidean').fit_predict(test_matrix)
